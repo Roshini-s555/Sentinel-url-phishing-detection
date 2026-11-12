@@ -5,8 +5,6 @@ An advanced, real-time machine learning threat classification framework engineer
 ## 🚀 Overview
 Traditional blacklists struggle to keep pace with zero-day phishing attacks and sophisticated social engineering tactics. **SentinelURL** leverages lexical feature extraction combined with a high-performance Random Forest classifier to evaluate URL security instantly.
 
-Developed as a Major Project (Phase 2 - BCS786) at the **Don Bosco Institute of Technology, Bengaluru**.
-
 ---
 
 ## 📊 Key Performance Metrics
