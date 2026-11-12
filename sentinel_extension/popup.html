@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SentinelURL Extension</title>
+    <style>
+        body { width: 300px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 15px; background: #f8fafc; color: #1e293b; }
+        h2 { font-size: 16px; margin-bottom: 4px; color: #0f172a; text-align: center; }
+        p.subtitle { font-size: 11px; text-align: center; color: #64748b; margin-bottom: 12px; }
+        .url-box { background: #e2e8f0; padding: 8px; border-radius: 6px; font-size: 12px; word-break: break-all; margin-bottom: 12px; color: #334155; }
+        button { width: 100%; background: #2563eb; color: white; border: none; padding: 10px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
+        #loading { display: none; text-align: center; font-size: 12px; color: #64748b; margin-top: 10px; }
+        .result-card { display: none; margin-top: 12px; padding: 10px; border-radius: 6px; background: #f1f5f9; border-left: 4px solid #cbd5e1; }
+        .result-card.Safe { border-left-color: #16a34a; background: #f0fdf4; }
+        .result-card.High { border-left-color: #dc2626; background: #fef2f2; }
+        .result-card.Medium { border-left-color: #d97706; background: #fffbeb; }
+        .result-card.Critical { border-left-color: #9333ea; background: #faf5ff; }
+        .res-title { font-size: 14px; font-weight: bold; margin-bottom: 4px; }
+        .metric { font-size: 12px; display: flex; justify-content: space-between; margin-top: 3px; color: #475569; }
+    </style>
+</head>
+<body>
+    <h2>SentinelURL</h2>
+    <p class="subtitle">Predictive Phishing Intelligence</p>
+
+    <div class="url-box" id="currentUrl">Loading current tab URL...</div>
+    <button id="scanBtn" onclick="scanCurrentTab()">Scan Current Tab</button>
+
+    <div id="loading">Analyzing via Flask API...</div>
+
+    <div id="resultCard" class="result-card">
+        <div id="resTitle" class="res-title"></div>
+        <div id="resRisk" style="font-size: 12px; margin-bottom: 6px;"></div>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 6px 0;">
+        <div id="resProbs"></div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

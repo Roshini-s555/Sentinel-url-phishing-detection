@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentinelURL — AI Phishing Intelligence Dashboard</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Curves & Graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        body { background: #f1f5f9; color: #1e293b; display: flex; height: 100vh; overflow: hidden; }
+
+        /* Sidebar Styling */
+        sidebar { width: 260px; background: #0f172a; color: #94a3b8; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-shadow: 4px 0 10px rgba(0,0,0,0.05); }
+        .sidebar-brand { font-size: 18px; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 10px; margin-bottom: 30px; }
+        .sidebar-brand i { color: #2563eb; font-size: 22px; }
+        .sidebar-menu { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        .sidebar-menu li a { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: #94a3b8; text-decoration: none; border-radius: 8px; font-weight: 500; font-size: 14px; transition: all 0.2s; cursor: pointer; }
+        .sidebar-menu li.active a, .sidebar-menu li a:hover { background: #2563eb; color: #ffffff; }
+
+        /* Main Content Area */
+        .main-container { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        
+        /* Top Navigation */
+        .topbar { background: #ffffff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
+        .topbar-title { font-size: 20px; font-weight: 700; color: #0f172a; }
+        .topbar-user { display: flex; align-items: center; gap: 15px; font-size: 14px; font-weight: 600; color: #475569; }
+        .topbar-user img { width: 36px; height: 36px; border-radius: 50%; background: #cbd5e1; }
+
+        /* Dashboard Content Grid */
+        .content { padding: 30px; display: flex; flex-direction: column; gap: 25px; }
+
+        /* Metric Cards Row */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .stat-card { background: #ffffff; border-radius: 12px; padding: 20px; position: relative; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; }
+        .stat-icon { position: absolute; top: -15px; left: 20px; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .stat-icon.blue { background: #2563eb; }
+        .stat-icon.green { background: #16a34a; }
+        .stat-icon.orange { background: #d97706; }
+        .stat-icon.purple { background: #9333ea; }
+        .stat-info { text-align: right; }
+        .stat-title { font-size: 13px; color: #64748b; font-weight: 500; }
+        .stat-value { font-size: 22px; font-weight: 700; color: #0f172a; margin-top: 4px; }
+
+        /* Scanner Section */
+        .scanner-card { background: #ffffff; border-radius: 12px; padding: 25px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
+        .scanner-title { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .input-group { display: flex; gap: 12px; }
+        input[type="text"] { flex: 1; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; transition: border 0.2s; }
+        input[type="text"]:focus { border-color: #2563eb; }
+        button { background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 8px; }
+        button:hover { background: #1d4ed8; }
+
+        /* Result Display Box */
+        #resultCard { display: none; margin-top: 20px; padding: 20px; border-radius: 8px; background: #f8fafc; border-left: 6px solid #cbd5e1; }
+        #resultCard.Safe { border-left-color: #16a34a; background: #f0fdf4; }
+        #resultCard.High { border-left-color: #dc2626; background: #fef2f2; }
+        #resultCard.Medium { border-left-color: #d97706; background: #fffbeb; }
+        #resultCard.Critical { border-left-color: #9333ea; background: #faf5ff; }
+        .result-header { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+        
+        /* OSINT Extra Row */
+        .osint-badge { display: inline-block; background: #e2e8f0; color: #334155; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; margin-top: 6px; }
+
+        /* Charts Section */
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media(max-width: 1024px) { .charts-grid { grid-template-columns: 1fr; } }
+        .chart-card { background: #ffffff; border-radius: 12px; padding: 25px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
+        .chart-header { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 15px; }
+        .chart-container { position: relative; height: 220px; width: 100%; }
+        #loading { display: none; text-align: center; color: #64748b; margin-top: 15px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <sidebar>
+        <div>
+            <div class="sidebar-brand">
+                <i class="fa-solid fa-shield-halved"></i> SentinelURL
+            </div>
+            <ul class="sidebar-menu">
+                <li id="menu-dash" class="active"><a onclick="setActiveMenu('dash', 'top-section')"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                <li id="menu-scanner"><a onclick="setActiveMenu('scanner', 'scanner-section')"><i class="fa-solid fa-magnifying-glass"></i> Live Scanner</a></li>
+                <li id="menu-roc"><a onclick="setActiveMenu('roc', 'charts-section')"><i class="fa-solid fa-chart-line"></i> ROC & Curves</a></li>
+            </ul>
+        </div>
+        <div style="font-size: 12px; color: #64748b; text-align: center;">
+            DBIT • CSE VTU 2026
+        </div>
+    </sidebar>
+
+    <!-- Main Content -->
+    <div class="main-container" id="mainContainer">
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="topbar-title">Threat Intelligence Dashboard</div>
+            <div class="topbar-user">
+                <span>Dr. Usha Kirana Team</span>
+                <img src="https://ui-avatars.com/api/?name=Sentinel+URL&background=2563eb&color=fff" alt="User">
+            </div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div class="content">
+            <!-- Top Metric Cards -->
+            <div id="top-section" class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="fa-solid fa-database"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-title">Total URLs Cleaned</div>
+                        <div class="stat-value">6,40,003</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fa-solid fa-check-circle"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-title">Model Accuracy</div>
+                        <div class="stat-value">94.28%</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-title">ROC-AUC Score</div>
+                        <div class="stat-value">0.9851</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i class="fa-solid fa-microchip"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-title">Algorithm</div>
+                        <div class="stat-value">Random Forest</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- URL Scanner Widget -->
+            <div id="scanner-section" class="scanner-card">
+                <div class="scanner-title"><i class="fa-solid fa-link" style="color:#2563eb;"></i> Live URL Threat Scanner & OSINT Intelligence</div>
+                <div class="input-group">
+                    <input type="text" id="urlInput" placeholder="Paste URL here (e.g., http://secure-login-bank.xyz)...">
+                    <button onclick="checkURL()"><i class="fa-solid fa-radar"></i> Scan URL</button>
+                </div>
+                <div id="loading"><i class="fa-solid fa-spinner fa-spin"></i> Running ML feature extraction & WHOIS lookup...</div>
+
+                <div id="resultCard">
+                    <div id="resTitle" class="result-header"></div>
+                    <div id="resRisk" style="font-size: 13px; font-weight: 500; margin-bottom: 6px;"></div>
+                    <div id="resOsint"></div>
+                    
+                    <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 12px 0;">
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: center;">
+                        <div>
+                            <div style="font-weight: 600; font-size: 13px; margin-bottom: 8px; color: #334155;">Confidence Probability Curve (%):</div>
+                            <div class="chart-container">
+                                <canvas id="probabilityChart"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; font-size: 13px; margin-bottom: 8px; color: #334155;">Safe Site Preview Thumbnail:</div>
+                            <img id="sitePreview" 
+                                 src="" 
+                                 alt="Site Preview" 
+                                 onerror="this.onerror=null; this.src='https://placehold.co/600x400/e2e8f0/475569?text=Preview+Not+Available';"
+                                 style="width: 100%; height: 220px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1; background: #e2e8f0;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts & Curves Section -->
+            <div id="charts-section" class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-header">Model Performance Metrics Comparison</div>
+                    <div class="chart-container">
+                        <canvas id="comparisonChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">Dataset Class Distribution</div>
+                    <div class="chart-container">
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart & Navigation Script -->
+    <script>
+        function setActiveMenu(menuId, targetId) {
+            document.querySelectorAll('.sidebar-menu li').forEach(li => li.classList.remove('active'));
+            document.getElementById('menu-' + menuId).classList.add('active');
+            document.getElementById(targetId).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Comparison Bar Chart
+        const ctxBar = document.getElementById('comparisonChart').getContext('2d');
+        new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: ['Random Forest', 'XGBoost (GBM)', 'Logistic Regression'],
+                datasets: [{
+                    label: 'Accuracy (%)',
+                    data: [94.28, 91.21, 86.87],
+                    backgroundColor: ['#16a34a', '#2563eb', '#d97706'],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: false, min: 80, max: 100 } }
+            }
+        });
+
+        // Distribution Doughnut Chart
+        const ctxPie = document.getElementById('distributionChart').getContext('2d');
+        new Chart(ctxPie, {
+            type: 'doughnut',
+            data: {
+                labels: ['Benign', 'Phishing', 'Defacement', 'Malware'],
+                datasets: [{
+                    data: [427662, 93909, 94787, 23645],
+                    backgroundColor: ['#16a34a', '#dc2626', '#d97706', '#9333ea'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+            }
+        });
+
+        let probChart = null;
+
+        async function checkURL() {
+            const url = document.getElementById('urlInput').value.trim();
+            if (!url) {
+                alert('Please enter a valid URL');
+                return;
+            }
+
+            const loading = document.getElementById('loading');
+            const resultCard = document.getElementById('resultCard');
+            loading.style.display = 'block';
+            resultCard.style.display = 'none';
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+
+                const data = await response.json();
+                loading.style.display = 'none';
+
+                if (response.ok) {
+                    resultCard.className = `result-card ${data.risk_level}`;
+                    document.getElementById('resTitle').innerText = `Prediction Result: ${data.prediction}`;
+                    document.getElementById('resRisk').innerHTML = `Risk Level: <strong>${data.risk_level}</strong> | Target URL: <span style="color:#0f172a; word-break:break-all;">${data.url}</span>`;
+                    
+                    document.getElementById('resOsint').innerHTML = `<span class="osint-badge"><i class="fa-solid fa-calendar-days"></i> Domain Age (WHOIS): ${data.domain_age}</span>`;
+                    document.getElementById('sitePreview').src = `https://image.thum.io/get/width/600/crop/800/${data.url}`;
+
+                    // Render Probability Bar Curve Chart with Percentage Data Labels
+                    const probCtx = document.getElementById('probabilityChart').getContext('2d');
+                    if (probChart) { probChart.destroy(); }
+
+                    probChart = new Chart(probCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Benign', 'Phishing', 'Defacement', 'Malware'],
+                            datasets: [{
+                                label: 'Confidence (%)',
+                                data: [
+                                    data.probabilities.Benign,
+                                    data.probabilities.Phishing,
+                                    data.probabilities.Defacement,
+                                    data.probabilities.Malware
+                                ],
+                                backgroundColor: ['#16a34a', '#dc2626', '#d97706', '#9333ea'],
+                                borderRadius: 4
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            layout: {
+                                padding: {
+                                    right: 35 // Leaves extra right margin so the 100% label never gets clipped or cut off
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return ` Confidence: ${context.raw}%`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    max: 115, // Headroom limit so 100% bar stops slightly short of edge, leaving room for text
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value <= 100 ? value + '%' : '';
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        plugins: [{
+                            id: 'percentageLabels',
+                            afterDatasetsDraw(chart) {
+                                const { ctx, data } = chart;
+                                chart.data.datasets.forEach((dataset, i) => {
+                                    const meta = chart.getDatasetMeta(i);
+                                    meta.data.forEach((bar, index) => {
+                                        const value = dataset.data[index] + '%';
+                                        ctx.fillStyle = '#1e293b';
+                                        ctx.font = 'bold 11px Inter';
+                                        ctx.textAlign = 'left';
+                                        ctx.textBaseline = 'middle';
+                                        ctx.fillText(value, bar.x + 6, bar.y);
+                                    });
+                                });
+                            }
+                        }]
+                    });
+
+                    resultCard.style.display = 'block';
+                } else {
+                    alert(data.error || 'Prediction failed');
+                }
+            } catch (err) {
+                loading.style.display = 'none';
+                alert('Could not connect to Flask server. Make sure app.py is running on port 5000.');
+            }
+        }
+    </script>
+</body>
+</html>
